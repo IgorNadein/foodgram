@@ -5,11 +5,17 @@ from django.db import models
 class User(AbstractUser):
     """Модель пользователя."""
     avatar = models.ImageField(
-        upload_to='avatars/',  # путь, куда будут загружаться файлы
+        upload_to='avatars/',
         blank=True,
         null=True,
-        default='avatars/default.jpg'  # путь к дефолтной аватарке
         verbose_name='Аватарка пользователя',
+    )
+    subscriptions = models.ManyToManyField(
+        to='self',
+        through='Subscription',
+        symmetrical=False,
+        related_name='subscribers',
+        blank=True
     )
 
     class Meta:

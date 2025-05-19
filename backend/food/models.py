@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-User = get_user_model
+User = get_user_model()
 
 
 class Tag(models.Model):
@@ -16,6 +16,15 @@ class Tag(models.Model):
         unique=True,
         verbose_name='Уникальный слаг',
     )
+
+    class Meta:
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'
+        ordering = ('name',)
+        default_related_name = 'tags'
+
+    def __str__(self):
+        return f'{self._meta.verbose_name}: {self.name}'
 
 
 class Ingredient(models.Model):
@@ -35,11 +44,11 @@ class Recipe(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='recipes',
-        verbose_name='Автор публикации (пользователь',
+        verbose_name='Автор публикации (пользователь)',
     )
     name = models.CharField(
         max_length=256,
-        verbose_name='Название',
+        verbose_name='Рецепт',
     )
     image = models.ImageField(
         upload_to='recipes/',
@@ -70,15 +79,15 @@ class Recipe(models.Model):
 class IngredientRecipe(models.Model):
     recipe = models.ForeignKey(
         Recipe,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='ingredient_recipes'
     )
     ingredient = models.ForeignKey(
         Ingredient,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='recipe_ingredients'
     )
     amount = models.IntegerField(
-        max_digits=6,
-        decimal_places=2,
         default=1,
         verbose_name='Количество ингредиентов',
         validators=[
