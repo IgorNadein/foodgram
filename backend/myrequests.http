@@ -1,8 +1,0 @@
-POST http://127.0.0.1:9000/api/auth/token/
-Content-Type: application/json
-
-{
-  "username": "newuser",
-  "email": "newuser@example.com",
-  "password": "strongpassword123"
-}

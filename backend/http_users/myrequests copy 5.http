@@ -1,0 +1,7 @@
+PUT http://localhost:9000/api/users/me/avatar/
+Content-Type: application/json
+Authorization: Token ddf656544aff30e7023013c11b3426ef2d041426
+
+{
+"avatar": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAgMAAABieywaAAAACVBMVEUAAAD///9fX1/S0ecCAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAACklEQVQImWNoAAAAggCByxOyYQAAAABJRU5ErkJggg=="
+}

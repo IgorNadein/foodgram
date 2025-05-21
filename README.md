@@ -2,3 +2,12 @@
 
 По адресу http://localhost изучите фронтенд веб-приложения, а по адресу http://localhost/api/docs/ — спецификацию API.
 
+
+
+python manage.py load_ingredients
+python manage.py load_tags
+python manage.py runserver 0.0.0.0:9000
+python manage.py makemigrations
+python manage.py migrate
+
+source .venv/Scripts/activate

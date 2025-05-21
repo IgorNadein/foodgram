@@ -1,56 +1,51 @@
+
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.contrib.auth.hashers import make_password
 from .models import User, Subscription
+from food.serializers import Base64ImageField
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    subscriptions_count = serializers.SerializerMethodField()
-    subscribers_count = serializers.SerializerMethodField()
+
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
+            'email',
             'id',
             'username',
-            'email',
             'first_name',
             'last_name',
+            'is_subscribed',
             'avatar',
-            'subscriptions_count',
-            'subscribers_count',
-            'is_subscribed'
         )
-        read_only_fields = ('username', 'email')
+        # read_only_fields = ('username', 'email')
 
-    def get_subscriptions_count(self, obj):
-        return obj.subscriptions.count()
+    # def get_subscriptions_count(self, obj):
+    #     return obj.subscriptions.count()
 
-    def get_subscribers_count(self, obj):
-        return obj.subscribers.count()
+    # def get_subscribers_count(self, obj):
+    #     return obj.subscribers.count()
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Subscription.objects.filter(
-                subscriber=request.user,
-                author=obj
-            ).exists()
-        return False
+        if request is None or request.user.is_anonymous:
+            return False
+        return Subscription.objects.filter(
+            user=request.user,
+            author=obj
+        ).exists()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    """Регистрация."""
     password = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
-    )
-    password2 = serializers.CharField(
         write_only=True,
         required=True,
         style={'input_type': 'password'}
@@ -59,28 +54,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username',
             'email',
-            'password',
-            'password2',
+            'id',
+            'username',
             'first_name',
-            'last_name'
+            'last_name',
+            'password',
         )
-        extra_kwargs = {
-            'password': {'write_only': True},
-            'password2': {'write_only': True}
-        }
-
-    def validate(self, attrs):
-        if attrs['password'] != attrs.pop('password2'):
-            raise serializers.ValidationError(
-                {'detail': 'Пароли не совпадают'}
-            )
-        try:
-            validate_password(attrs['password'])
-        except ValidationError as e:
-            raise serializers.ValidationError({'password': e.messages})
-        return attrs
 
     def create(self, validated_data):
         user = User.objects.create(
@@ -94,21 +74,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)
-    subscriber = UserSerializer(read_only=True)
-
-    class Meta:
-        model = Subscription
-        fields = ('id', 'author', 'subscriber', 'created')
-        read_only_fields = ('created',)
-
-
 class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=True)
+
     class Meta:
         model = User
         fields = ('avatar',)
-        extra_kwargs = {'avatar': {'required': True}}
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -132,3 +103,44 @@ class ChangePasswordSerializer(serializers.Serializer):
         instance.set_password(validated_data['new_password'])
         instance.save()
         return instance
+
+
+class AuthTokenSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        style={'input_type': 'password'}, trim_whitespace=False)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if email and password:
+            user = authenticate(request=self.context.get(
+                'request'), email=email, password=password)
+
+            if not user:
+                # Проверка существования пользователя
+                user = User.objects.filter(email=email).first()
+                if not user:
+                    raise serializers.ValidationError(
+                        {'detail': 'Пользователь с таким email не найден'},
+                        code='authorization'
+                    )
+
+                raise serializers.ValidationError(
+                    {'detail': 'Неверный пароль'},
+                    code='authorization'
+                )
+        else:
+            raise serializers.ValidationError(
+                {'detail': 'Пожалуйста, предоставьте email и пароль'},
+                code='authorization'
+            )
+
+        attrs['user'] = user
+        return attrs
+
+    def create(self, validated_data):
+        user = validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return {'auth_token': token.key}

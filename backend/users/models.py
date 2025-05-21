@@ -4,8 +4,14 @@ from django.db import models
 
 class User(AbstractUser):
     """Модель пользователя."""
+    email = models.EmailField(
+        unique=True,
+        blank=False,
+        null=False,
+        verbose_name='Email пользователя'
+    )
     avatar = models.ImageField(
-        upload_to='avatars/',
+        upload_to='users/',
         blank=True,
         null=True,
         verbose_name='Аватарка пользователя',
@@ -17,6 +23,8 @@ class User(AbstractUser):
         related_name='subscribers',
         blank=True
     )
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
     class Meta:
         verbose_name = 'Пользователь'
