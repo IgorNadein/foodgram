@@ -25,20 +25,13 @@ class UserSerializer(serializers.ModelSerializer):
             'is_subscribed',
             'avatar',
         )
-        # read_only_fields = ('username', 'email')
-
-    # def get_subscriptions_count(self, obj):
-    #     return obj.subscriptions.count()
-
-    # def get_subscribers_count(self, obj):
-    #     return obj.subscribers.count()
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
         if request is None or request.user.is_anonymous:
             return False
         return Subscription.objects.filter(
-            user=request.user,
+            subscriber=request.user,
             author=obj
         ).exists()
 

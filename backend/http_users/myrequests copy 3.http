@@ -2,6 +2,6 @@ POST http://localhost:9000/api/auth/token/login/
 Content-Type: application/json
 
 {
-"email": "hhiisdh@yandx.ru",
+"email": "hhiish@yandx.ru",
 "password": "Qwerty1223"
 }

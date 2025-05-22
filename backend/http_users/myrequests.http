@@ -2,9 +2,9 @@ POST http://127.0.0.1:9000/api/users/
 Content-Type: application/json
 
 {
-"email": "hhiisdh@yandx.ru",
-"username": "phdjj",
-"first_name": "петя",
-"last_name": "Пупкин",
+"email": "hhiish@yandx.ru",
+"username": "inoi",
+"first_name": "xxxxx",
+"last_name": "xxxxx",
 "password": "Qwerty1223"
 }

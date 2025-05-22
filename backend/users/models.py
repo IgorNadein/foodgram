@@ -16,13 +16,13 @@ class User(AbstractUser):
         null=True,
         verbose_name='Аватарка пользователя',
     )
-    subscriptions = models.ManyToManyField(
-        to='self',
-        through='Subscription',
-        symmetrical=False,
-        related_name='subscribers',
-        blank=True
-    )
+    # subscriptions = models.ManyToManyField(
+    #     to='self',
+    #     through='Subscription',
+    #     symmetrical=False,
+    #     related_name='subscribers',
+    #     blank=True
+    # )
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
@@ -40,13 +40,13 @@ class Subscription(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='following',
+        related_name='following',  # The user being followed
         verbose_name='Автор'
     )
     subscriber = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='follower',
+        related_name='followers',  # Users following this author
         verbose_name='Подписчик'
     )
 

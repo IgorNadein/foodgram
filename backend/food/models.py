@@ -1,3 +1,5 @@
+import shortuuid
+
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -51,7 +53,7 @@ class Recipe(models.Model):
         verbose_name='Рецепт',
     )
     image = models.ImageField(
-        upload_to='recipes/',
+        upload_to='recipes/images/',
         verbose_name='Картинка',
     )
     text = models.TextField(
@@ -76,6 +78,14 @@ class Recipe(models.Model):
         ],
         verbose_name='Время приготовления в минутах'
     )
+    short_link = models.CharField(
+        max_length=10, unique=True, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.short_link:
+            self.short_link = shortuuid.random(
+                length=7)
+        super().save(*args, **kwargs)
 
 
 class IngredientRecipe(models.Model):

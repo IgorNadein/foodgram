@@ -78,8 +78,10 @@ class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    image = serializers.URLField(source='image.url', read_only=True) # Changed from Base64ImageField
-    author = UserSerializer(read_only=True)  # Added read_only=True for output representation
+    # Changed from Base64ImageField
+    image = serializers.URLField(source='image.url', read_only=True)
+    # Added read_only=True for output representation
+    author = UserSerializer(read_only=True)
 
     class Meta:
         model = Recipe
@@ -98,7 +100,8 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_ingredients(self, obj):
         # Efficiently retrieve ingredient information using prefetch_related
-        ingredients = IngredientRecipe.objects.filter(recipe=obj).select_related('ingredient') # Only one query now!
+        ingredients = IngredientRecipe.objects.filter(
+            recipe=obj).select_related('ingredient')  # Only one query now!
         return [
             {
                 'id': item.ingredient.id,
@@ -110,15 +113,17 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_favorited(self, obj):
-        request = self.context.get('request') # You will need to pass in the request via the context
+        # You will need to pass in the request via the context
+        request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.favorites.filter(user=request.user).exists()
+            return obj.favorited_by.filter(user=request.user).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
-        request = self.context.get('request') # You will need to pass in the request via the context
+        # You will need to pass in the request via the context
+        request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.shopping_cart.filter(user=request.user).exists()
+            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
         return False
 
 
@@ -184,14 +189,20 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return validated_ingredients  # Return validated data
 
     def create(self, validated_data):
-        ingredients = validated_data.pop('ingredients')  # Extract ingredients first
+        ingredients = validated_data.pop(
+            'ingredients')  # Extract ingredients first
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)  # No need to pop tags
 
         # Create IngredientRecipe objects more efficiently
         IngredientRecipe.objects.bulk_create([
-            IngredientRecipe(recipe=recipe, ingredient=item['ingredient'], amount=item['amount'])
+            IngredientRecipe(
+                recipe=recipe, ingredient=item['ingredient'], amount=item['amount'])
             for item in ingredients
         ])
         return recipe
+
+
+class RecipeShortLinkSerializer(serializers.Serializer):
+    short_link = serializers.CharField(read_only=True)
