@@ -16,13 +16,6 @@ class User(AbstractUser):
         null=True,
         verbose_name='Аватарка пользователя',
     )
-    # subscriptions = models.ManyToManyField(
-    #     to='self',
-    #     through='Subscription',
-    #     symmetrical=False,
-    #     related_name='subscribers',
-    #     blank=True
-    # )
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 

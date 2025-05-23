@@ -1,4 +1,0 @@
-GET  http://localhost:9000/api/users/me/
-Content-Type: application/json
-Authorization: Token cf44a18e86f4a395707a00b8ad67c11b7d59fb90
-

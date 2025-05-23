@@ -1,0 +1,3 @@
+GET  http://localhost:8000/api/users/subscriptions/
+Content-Type: application/json
+Authorization: Token a1c59cd98b91528c843623be7cb9b1f737bc3ed5

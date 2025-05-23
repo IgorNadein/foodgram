@@ -1,58 +1,63 @@
+from django.http import HttpResponse
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from django.db.models import Count
-from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, filters, mixins, serializers
 from rest_framework.permissions import (
     IsAuthenticated,
-    IsAuthenticatedOrReadOnly,
-    AllowAny
+    AllowAny,
+    IsAdminUser
 )
-from rest_framework.response import Response
-from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework import status
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.response import Response
+# from rest_framework.filters import SearchFilter
 
 from food.models import (
     Recipe,
     Tag,
     Ingredient,
     IngredientRecipe,
-    ShoppingCart
+    ShoppingCart,
+    Favorite
 )
 from .serializers import (
     RecipeSerializer,
     RecipeCreateSerializer,
     TagSerializer,
     RecipeShortLinkSerializer,
-    IngredientSerializer
+    IngredientSerializer,
+    ShoppingCartSerializer
 )
 from .permissions import IsAuthorOrReadOnly
+from .filters import RecipeFilter, IngredientFilter
 
 
-class TagViewSet(viewsets.ModelViewSet):
+class TagViewSet(mixins.ListModelMixin,
+                 mixins.RetrieveModelMixin,
+                 viewsets.GenericViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
+    pagination_class = None
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
+class IngredientViewSet(mixins.ListModelMixin,
+                        mixins.RetrieveModelMixin,
+                        viewsets.GenericViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny]
-
-    @action(detail=False, methods=['GET'])
-    def search(self, request):
-        query = request.query_params.get('query', '')
-        if query:
-            queryset = Ingredient.objects.filter(name__icontains=query)
-        else:
-            queryset = Ingredient.objects.all()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IngredientFilter
+    pagination_class = None
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_class = RecipeFilter
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -81,15 +86,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED, headers=headers
         )
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(
-            instance, data=request.data, partial=False)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        read_serializer = RecipeSerializer(instance)
-        return Response(read_serializer.data)
-
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(
@@ -98,6 +94,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ingredients = serializer.validated_data.pop(
             'ingredients', None)
         tags = serializer.validated_data.pop('tags', None)
+        if 'ingredients' not in request.data:
+            raise serializers.ValidationError(
+                {'ingredients': 'Обязательное поле'}
+            )
+        if 'tags' not in request.data:
+            raise serializers.ValidationError(
+                {'tags': 'Обязательное поле'}
+            )
         serializer.save()
 
         if ingredients is not None:
@@ -119,62 +123,120 @@ class RecipeViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_recipe_short_link(request, pk):
+    """Создание короткой ссылки."""
     recipe = get_object_or_404(Recipe, pk=pk)
-    short_link = request.build_absolute_uri(
-        reverse('recipe-redirect', args=[recipe.short_link]))  # Correct implementation
-    serializer = RecipeShortLinkSerializer({'short_link': short_link})
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    short_link_value = request.build_absolute_uri(
+        reverse('recipe-redirect', args=[recipe.short_link]))
+
+    # Ensure short_link_value is passed as a dictionary, not a string
+    data = {'short_link': short_link_value}
+    serializer = RecipeShortLinkSerializer(data=data)  # Pass as data
+
+    if serializer.is_valid():
+        # return the serializer.data
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 def recipe_redirect(request, short_link):
+    """Переход по короткой ссылке."""
     recipe = get_object_or_404(Recipe, short_link=short_link)
     detail_url = reverse("api:recipe-list") + str(recipe.pk) + "/"
     return redirect(detail_url)
 
 
-@api_view(['POST', 'DELETE'])  # Allow both POST and DELETE
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def manage_shopping_cart(request, pk):
+def download_shopping_cart(request):
     """
-    Adds or removes a recipe from the user's shopping cart.
-    POST: Adds the recipe.
-    DELETE: Removes the recipe.
+    Загружает текстовый файл, содержащий список покупок пользователя.
+    """
+    user = request.user
+    shopping_cart_items = ShoppingCart.objects.filter(
+        user=user).select_related('recipe')
+
+    if not shopping_cart_items.exists():
+        return HttpResponse("Ваш список покупок пуст.", content_type='text/plain; charset=utf-8')
+
+    shopping_list_content = "Список покупок:\n\n"
+    ingredients = {}
+
+    for item in shopping_cart_items:
+        recipe = item.recipe
+        for ingredient_recipe in recipe.ingredient_recipes.all():
+            ingredient = ingredient_recipe.ingredient
+            amount = ingredient_recipe.amount
+            if ingredient in ingredients:
+                ingredients[ingredient] += amount
+            else:
+                ingredients[ingredient] = amount
+
+    for ingredient, total_amount in ingredients.items():
+        shopping_list_content += f"- {ingredient.name} ({ingredient.measurement_unit}) - {total_amount}\n"
+
+    response = HttpResponse(shopping_list_content,
+                            content_type='text/plain; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+    return response
+
+
+def manage_relation(request, pk, model, error_message, serializer=None):
+    """
+    Универсальная функция для добавления/удаления рецепта из связанной модели (например, Избранное, корзина покупок).
+
+    Аргументы:
+        request: Объект HTTP-запроса.
+        pk: Первичный ключ объекта Recipe.
+        model: модель для управления (например, Избранное, корзина покупок).
+        error_message: Сообщение об ошибке, которое возвращается, если рецепт уже включен в отношение.
+        serializer (optional): Сериализатор, который используется для запросов POST. По умолчанию установлено значение "Нет".
+
+    Returns:
+        Объект ответа.
     """
     recipe = get_object_or_404(Recipe, pk=pk)
     user = request.user
 
     if request.method == 'POST':
-        # Add the recipe to the shopping cart
-        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
-            return Response({'error': 'Recipe already in shopping cart.'}, status=status.HTTP_400_BAD_REQUEST)
+        if model.objects.filter(user=user, recipe=recipe).exists():
+            return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
 
-        ShoppingCart.objects.create(user=user, recipe=recipe)
-        serializer = RecipeSerializer(recipe, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        model.objects.create(user=user, recipe=recipe)
+        if serializer:
+            serializer = serializer(recipe, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(status=status.HTTP_201_CREATED)
 
     elif request.method == 'DELETE':
-        # Remove the recipe from the shopping cart
         try:
-            shopping_cart_item = ShoppingCart.objects.get(user=user, recipe=recipe)
-            shopping_cart_item.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)  # Successful deletion
-        except ShoppingCart.DoesNotExist:
-            return Response({'error': 'Recipe not in shopping cart.'}, status=status.HTTP_404_NOT_FOUND)
+            item = model.objects.get(user=user, recipe=recipe)
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except model.DoesNotExist:
+            return Response({'error': 'Рецепт не найден в списке.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED) 
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-# @api_view(['GET', 'POST'])
-# @permission_classes([IsAuthenticatedOrReadOnly])
-# def recipe_list_create(request):
-#     if request.method == 'GET':
-#         recipes = Recipe.objects.all()
-#         serializer = RecipeSerializer(recipes, many=True)  # Use RecipeReadSerializer for GET
-#         return Response(serializer.data)
 
-#     elif request.method == 'POST':
-#         serializer = RecipeCreateSerializer(data=request.data, context={'request': request})
-#         if serializer.is_valid():
-#             recipe = serializer.save(author=request.user)  # Save the recipe
-#             read_serializer = RecipeSerializer(recipe)  # Serialize using RecipeReadSerializer
-#             return Response(read_serializer.data, status=status.HTTP_201_CREATED)  # Return serialized data
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def manage_shopping_cart(request, pk):
+    """
+    Управляет добавлением / удалением рецептов из корзины покупок пользователя.
+    """
+    return manage_relation(
+        request, pk, ShoppingCart, 'Рецепт уже в корзине покупок.', ShoppingCartSerializer
+    )
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def manage_favorite(request, pk):
+    """
+    Управляет добавлением / удалением рецептов из избранного пользователя.
+    """
+    return manage_relation(
+        request, pk, Favorite, 'Рецепт уже в избранном.', RecipeSerializer
+    )
