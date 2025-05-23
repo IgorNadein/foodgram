@@ -1,18 +1,19 @@
 
-from rest_framework import serializers
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate, get_user_model, update_session_auth_hash
+from django.contrib.auth import (authenticate, get_user_model,
+                                 update_session_auth_hash)
 from django.contrib.auth.password_validation import validate_password
 from django.core import validators
+from rest_framework import serializers
+from rest_framework.authtoken.models import Token
 
-from .models import User, Subscription
 from food.serializers import Base64ImageField, RecipeShortSerializer
+from .models import Subscription, User
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-
+    """Сериализатор пользователя."""
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
@@ -49,9 +50,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validators=[
             validators.RegexValidator(
                 regex=r'^[\w.@+-]+\Z',
-                message='Enter a valid username. This value may contain only letters, numbers, @/./+/-/_ characters.',
-            ),
-        ],
+                message=(
+                    'Введите корректное имя пользователя. '
+                    'Это значение может содержать только буквы, '
+                    'цифры и символы @, ., +, -, _.'
+                ),
+            )
+        ]
     )
     first_name = serializers.CharField(
         required=True,
@@ -90,17 +95,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
     def validate_username(self, value):
-        """Check username uniqueness."""
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError(
-                'A user with that username already exists.')
+                'Пользователь с таким username уже существует.')
         return value
 
     def validate_email(self, value):
-        """Check email uniqueness."""
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError(
-                'A user with that email already exists.')
+                'Пользователь с таким email уже существует.')
         return value
 
 
@@ -175,7 +178,10 @@ class SubscribedUserSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request is None or request.user.is_anonymous:
             return False
-        return Subscription.objects.filter(subscriber=request.user, author=obj).exists()
+        return Subscription.objects.filter(
+            subscriber=request.user,
+            author=obj
+        ).exists()
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -186,7 +192,9 @@ class SubscribedUserSerializer(serializers.ModelSerializer):
             except ValueError:
                 recipes_limit = None
         recipes = obj.recipes.all()[:recipes_limit]
-        return RecipeShortSerializer(recipes, many=True, context={'request': request}).data
+        return RecipeShortSerializer(
+            recipes, many=True, context={'request': request}
+        ).data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
@@ -199,7 +207,7 @@ class PasswordChangeSerializer(serializers.Serializer):
         required=True, write_only=True, label="New password")
 
     def validate_new_password(self, value):
-        validate_password(value)  # Django's password validation
+        validate_password(value)
         return value
 
     def validate(self, data):
@@ -208,22 +216,24 @@ class PasswordChangeSerializer(serializers.Serializer):
         user = self.context['request'].user
 
         if user.is_superuser:
-            # Superusers authenticate with username
-            if not authenticate(username=user.username, password=current_password):
+            if not authenticate(
+                username=user.username,
+                password=current_password
+            ):
                 raise serializers.ValidationError(
-                    {'current_password': 'Incorrect password.'})
+                    {'current_password': 'Неверный пароль.'})
         else:
-            # Regular users authenticate with email
-            if not authenticate(username=user.email, password=current_password):
+            if not authenticate(
+                username=user.email,
+                password=current_password
+            ):
                 raise serializers.ValidationError(
-                    {'current_password': 'Incorrect password.'})  # or user.username
+                    {'current_password': 'Неверный пароль.'})
 
         if current_password == new_password:
             raise serializers.ValidationError(
-                {'new_password': 'The new password cannot be the same as the old password.'}
+                {'new_password': 'Новый пароль не может совпадать со старым.'}
             )
-
-        # Return the validated data with original field names
         return {'old_password': current_password, 'new_password': new_password}
 
     def save(self):

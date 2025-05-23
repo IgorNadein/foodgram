@@ -1,8 +1,8 @@
-from django.urls import path, include
+from django.urls import include, path
 
-from .routers import router
-from . import views
 from users import views as users_views
+from . import views
+from .routers import router
 
 urlpatterns = [
     path('auth/token/login/',

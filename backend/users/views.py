@@ -1,25 +1,17 @@
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.forms import PasswordChangeForm
-
-from rest_framework import viewsets, status, generics
-from rest_framework.decorators import action, api_view, permission_classes
+from food.serializers import RecipeShortSerializer
+from rest_framework import generics, status, viewsets
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from rest_framework.authtoken.models import Token
 
 from api.permissions import IsAuthorOrReadOnly
-from .models import User, Subscription
-from .forms import CustomPasswordChangeForm
-from .serializers import (
-    UserSerializer,
-    AvatarSerializer,
-    AuthTokenSerializer,
-    UserRegistrationSerializer,
-    SubscribedUserSerializer,
-    PasswordChangeSerializer
-)
-from food.serializers import RecipeShortSerializer
+from .models import Subscription, User
+from .serializers import (AuthTokenSerializer, AvatarSerializer,
+                          PasswordChangeSerializer, SubscribedUserSerializer,
+                          UserRegistrationSerializer, UserSerializer)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -47,44 +39,48 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
-    @action(detail=False, methods=['get'], url_path='me', permission_classes=[IsAuthorOrReadOnly])
+    @action(detail=False, methods=['get'],
+            url_path='me', permission_classes=[IsAuthorOrReadOnly])
     def me(self, request):
         if request.user.is_authenticated:
             serializer = self.get_serializer(request.user)
             return Response(serializer.data)
         else:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': 'Требуется аутентификация.'},
+                            status=status.HTTP_401_UNAUTHORIZED)
 
     @action(detail=True, methods=['post', 'delete'], url_path='subscribe')
     def subscribe(self, request, pk=None):
-        """
-        Subscribes the current user to another user or unsubscribes.
-        """
-        user_to_subscribe = get_object_or_404(User, pk=pk)  # Use pk, not id
+        """Подписка/отписка от пользователя."""
+        user_to_subscribe = get_object_or_404(User, pk=pk)
         current_user = request.user
-        
-        # Check if the user is authenticated BEFORE using current_user
         if not current_user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-
+            return Response(
+                {'detail': 'Требуется аутентификация.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         if request.method == 'POST':
             if current_user == user_to_subscribe:
-                return Response({'error': 'Вы не можете подписаться на самого себя.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            if Subscription.objects.filter(subscriber=current_user, author=user_to_subscribe).exists():
-                return Response({'error': 'Вы уже подписаны на этого пользователя.'}, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response(
+                    {'error': 'Вы не можете подписаться на самого себя.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if Subscription.objects.filter(
+                subscriber=current_user,
+                author=user_to_subscribe
+            ).exists():
+                return Response(
+                    {'error': 'Вы уже подписаны на этого пользователя.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             Subscription.objects.create(
                 subscriber=current_user, author=user_to_subscribe)
-
             recipes_limit = request.query_params.get('recipes_limit')
             if recipes_limit:
                 try:
                     recipes_limit = int(recipes_limit)
                 except ValueError:
                     recipes_limit = None
-
             subscribed_user_data = {
                 'email': user_to_subscribe.email,
                 'id': user_to_subscribe.id,
@@ -98,9 +94,16 @@ class UserViewSet(viewsets.ModelViewSet):
                     context={'request': request}
                 ).data,
                 'recipes_count': user_to_subscribe.recipes.count(),
-                'avatar': user_to_subscribe.avatar.url if user_to_subscribe.avatar else None
+                'avatar': (
+                    user_to_subscribe.avatar.url
+                    if user_to_subscribe.avatar
+                    else None
+                )
             }
-            return Response(subscribed_user_data, status=status.HTTP_201_CREATED)
+            return Response(
+                subscribed_user_data,
+                status=status.HTTP_201_CREATED
+            )
 
         elif request.method == 'DELETE':
             try:
@@ -109,10 +112,13 @@ class UserViewSet(viewsets.ModelViewSet):
                 subscription.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except Subscription.DoesNotExist:
-                return Response({'error': 'Вы не подписаны на этого пользователя.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'error': 'Вы не подписаны на этого пользователя.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+
     @action(detail=False, methods=['post'], url_path='set_password')
     def set_password(self, request):
         """
@@ -125,7 +131,10 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class AuthTokenView(APIView):
@@ -133,7 +142,10 @@ class AuthTokenView(APIView):
         serializer = AuthTokenSerializer(
             data=request.data, context={'request': request})
         if serializer.is_valid():
-            return Response(serializer.create(serializer.validated_data), status=status.HTTP_200_OK)
+            return Response(
+                serializer.create(serializer.validated_data),
+                status=status.HTTP_200_OK
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -159,7 +171,10 @@ class UserAvatarUpdateOrDeleteView(APIView):
             if serializer.instance.avatar:
                 avatar_url = serializer.instance.avatar.url
                 full_avatar_url = request.build_absolute_uri(avatar_url)
-                return Response({'avatar': full_avatar_url}, status=status.HTTP_200_OK)
+                return Response(
+                    {'avatar': full_avatar_url},
+                    status=status.HTTP_200_OK
+                )
             else:
                 return Response({'avatar': None}, status=status.HTTP_200_OK)
 

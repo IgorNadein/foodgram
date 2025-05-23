@@ -1,7 +1,7 @@
 import base64
 
-from rest_framework import serializers
 from django.core.files.base import ContentFile
+from rest_framework import serializers
 
 from .models import Recipe
 
@@ -15,7 +15,7 @@ class Base64ImageField(serializers.ImageField):
             data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
 
         return super().to_internal_value(data)
-    
+
 
 class RecipeShortSerializer(serializers.ModelSerializer):
     class Meta:

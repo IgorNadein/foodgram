@@ -2,15 +2,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
+from food.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
+                         ShoppingCart, Tag)
 from food.serializers import Base64ImageField
-from food.models import (
-    Tag,
-    Ingredient,
-    Recipe,
-    IngredientRecipe,
-    Favorite,
-    ShoppingCart
-)
 from users.serializers import UserSerializer
 
 User = get_user_model()
@@ -71,7 +65,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = (
+        fields = [
             'id',
             'tags',
             'author',
@@ -82,7 +76,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'image',
             'text',
             'cooking_time'
-        )
+        ]
 
     def get_ingredients(self, obj):
         ingredients = IngredientRecipe.objects.filter(
@@ -100,13 +94,17 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+            return Favorite.objects.filter(
+                user=request.user, recipe=obj
+            ).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+            return ShoppingCart.objects.filter(
+                user=request.user, recipe=obj
+            ).exists()
         return False
 
 
@@ -125,7 +123,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = (
+        fields = [
             'author',
             'cooking_time',
             'image',
@@ -133,7 +131,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'name',
             'tags',
             'text',
-        )
+        ]
 
     def validate_tags(self, value):
         if not value:
@@ -159,11 +157,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         for ingredient_data in value:
             if not isinstance(ingredient_data, dict):
                 raise serializers.ValidationError(
-                    "Каждая запись об ингредиенте должна быть приведена в словаре."
+                    "Выберите из списка ингридиентов."
                 )
             if 'id' not in ingredient_data or 'amount' not in ingredient_data:
                 raise serializers.ValidationError(
-                    "Каждая запись об ингредиенте должна содержать 'id' и 'amount'."
+                    "Каждый ингридиент должна содержать 'id' и 'amount'."
                 )
             try:
                 ingredient = Ingredient.objects.get(id=ingredient_data['id'])
@@ -174,7 +172,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
             if ingredient.id in ingredient_ids:
                 raise serializers.ValidationError(
-                    f"Ингредиент с id '{ingredient_data['id']}' указан более одного раза.")
+                    f"Ингредиент с id '{ingredient_data['id']}' дублируется.")
             ingredient_ids.append(ingredient.id)
 
             if not isinstance(ingredient_data['amount'], int):
@@ -203,7 +201,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
         IngredientRecipe.objects.bulk_create([
             IngredientRecipe(
-                recipe=recipe, ingredient=item['ingredient'], amount=item['amount'])
+                recipe=recipe,
+                ingredient=item['ingredient'],
+                amount=item['amount']
+            )
             for item in ingredients
         ])
         return recipe
@@ -217,10 +218,16 @@ class RecipeShortLinkSerializer(serializers.Serializer):
         return {'short-link': instance.get('short_link')}
 
 
-class ShoppingCartSerializer(RecipeSerializer):
+class ShoppingCartFavoriteSerializer(RecipeSerializer):
+
     class Meta(RecipeSerializer.Meta):
         model = Recipe
-        fields = ['id', 'name', 'image', 'cooking_time']
+        fields = [
+            'id',
+            'name',
+            'image',
+            'cooking_time'
+        ]
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

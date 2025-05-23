@@ -1,6 +1,7 @@
 import django_filters
-from food.models import Recipe, Tag, Favorite, ShoppingCart, Ingredient
 from django.db.models import Exists, OuterRef
+
+from food.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 
 class RecipeFilter(django_filters.FilterSet):
@@ -53,11 +54,10 @@ class RecipeFilter(django_filters.FilterSet):
         return queryset
 
 
-
-
-
 class IngredientFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(field_name='name', lookup_expr='istartswith')
+    name = django_filters.CharFilter(
+        field_name='name', lookup_expr='istartswith'
+    )
 
     class Meta:
         model = Ingredient

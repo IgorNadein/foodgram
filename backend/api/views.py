@@ -1,36 +1,19 @@
 from django.http import HttpResponse
-from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, filters, mixins, serializers
-from rest_framework.permissions import (
-    IsAuthenticated,
-    AllowAny,
-    IsAdminUser
-)
-from rest_framework import status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework import filters, mixins, serializers, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-# from rest_framework.filters import SearchFilter
 
-from food.models import (
-    Recipe,
-    Tag,
-    Ingredient,
-    IngredientRecipe,
-    ShoppingCart,
-    Favorite
-)
-from .serializers import (
-    RecipeSerializer,
-    RecipeCreateSerializer,
-    TagSerializer,
-    RecipeShortLinkSerializer,
-    IngredientSerializer,
-    ShoppingCartSerializer
-)
+from food.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
+                         ShoppingCart, Tag)
+from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAuthorOrReadOnly
-from .filters import RecipeFilter, IngredientFilter
+from .serializers import (IngredientSerializer, RecipeCreateSerializer,
+                          RecipeSerializer, RecipeShortLinkSerializer,
+                          ShoppingCartFavoriteSerializer, TagSerializer)
 
 
 class TagViewSet(mixins.ListModelMixin,
@@ -128,12 +111,10 @@ def get_recipe_short_link(request, pk):
     short_link_value = request.build_absolute_uri(
         reverse('recipe-redirect', args=[recipe.short_link]))
 
-    # Ensure short_link_value is passed as a dictionary, not a string
     data = {'short_link': short_link_value}
-    serializer = RecipeShortLinkSerializer(data=data)  # Pass as data
+    serializer = RecipeShortLinkSerializer(data=data)
 
     if serializer.is_valid():
-        # return the serializer.data
         return Response(serializer.data, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -157,7 +138,10 @@ def download_shopping_cart(request):
         user=user).select_related('recipe')
 
     if not shopping_cart_items.exists():
-        return HttpResponse("Ваш список покупок пуст.", content_type='text/plain; charset=utf-8')
+        return HttpResponse(
+            "Ваш список покупок пуст.",
+            content_type='text/plain; charset=utf-8'
+        )
 
     shopping_list_content = "Список покупок:\n\n"
     ingredients = {}
@@ -173,24 +157,31 @@ def download_shopping_cart(request):
                 ingredients[ingredient] = amount
 
     for ingredient, total_amount in ingredients.items():
-        shopping_list_content += f"- {ingredient.name} ({ingredient.measurement_unit}) - {total_amount}\n"
+        shopping_list_content += f"""
+        - {ingredient.name} ({ingredient.measurement_unit}) - {total_amount}\n
+        """
 
     response = HttpResponse(shopping_list_content,
                             content_type='text/plain; charset=utf-8')
-    response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+    response['Content-Disposition'] = (
+        'attachment; filename="shopping_list.txt"'
+    )
     return response
 
 
 def manage_relation(request, pk, model, error_message, serializer=None):
     """
-    Универсальная функция для добавления/удаления рецепта из связанной модели (например, Избранное, корзина покупок).
+    Универсальная функция для добавления/удаления рецепта из связанной модели
+    (например, Избранное, корзина покупок).
 
     Аргументы:
         request: Объект HTTP-запроса.
         pk: Первичный ключ объекта Recipe.
         model: модель для управления (например, Избранное, корзина покупок).
-        error_message: Сообщение об ошибке, которое возвращается, если рецепт уже включен в отношение.
-        serializer (optional): Сериализатор, который используется для запросов POST. По умолчанию установлено значение "Нет".
+        error_message: Сообщение об ошибке, которое возвращается, если рецепт
+        уже включен в отношение.
+        serializer (optional): Сериализатор, который используется для запросов
+        POST. По умолчанию установлено значение "Нет".
 
     Returns:
         Объект ответа.
@@ -200,7 +191,9 @@ def manage_relation(request, pk, model, error_message, serializer=None):
 
     if request.method == 'POST':
         if model.objects.filter(user=user, recipe=recipe).exists():
-            return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': error_message}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         model.objects.create(user=user, recipe=recipe)
         if serializer:
@@ -215,7 +208,10 @@ def manage_relation(request, pk, model, error_message, serializer=None):
             item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except model.DoesNotExist:
-            return Response({'error': 'Рецепт не найден в списке.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Рецепт не найден в списке.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -227,7 +223,8 @@ def manage_shopping_cart(request, pk):
     Управляет добавлением / удалением рецептов из корзины покупок пользователя.
     """
     return manage_relation(
-        request, pk, ShoppingCart, 'Рецепт уже в корзине покупок.', ShoppingCartSerializer
+        request, pk, ShoppingCart,
+        'Рецепт уже в корзине покупок.', ShoppingCartFavoriteSerializer
     )
 
 
@@ -238,5 +235,6 @@ def manage_favorite(request, pk):
     Управляет добавлением / удалением рецептов из избранного пользователя.
     """
     return manage_relation(
-        request, pk, Favorite, 'Рецепт уже в избранном.', RecipeSerializer
+        request, pk, Favorite,
+        'Рецепт уже в избранном.', ShoppingCartFavoriteSerializer
     )
