@@ -151,7 +151,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 "Список ингридиентов не может быть пустым."
             )
 
-        ingredient_ids = []  # To track seen ingredient IDs
+        ingredient_ids = []
         validated_ingredients = []
 
         for ingredient_data in value:
@@ -176,9 +176,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             ingredient_ids.append(ingredient.id)
 
             if not isinstance(ingredient_data['amount'], int):
-                raise serializers.ValidationError(
-                    "'amount' должен быть целым числом."
-                )
+                try:
+                    ingredient_data['amount'] = int(ingredient_data['amount'])
+                except ValueError:
+                    raise serializers.ValidationError(
+                        "'amount' должен быть целым числом."
+                    )
 
             if ingredient_data['amount'] <= 0:
                 raise serializers.ValidationError(

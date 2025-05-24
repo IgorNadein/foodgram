@@ -1,3 +1,0 @@
-POST  http://localhost:9000/api/auth/token/logout/ 
-Content-Type: application/json
-Authorization: Token 10e73848b807fb195a1ac60997a4cbd2408296c0

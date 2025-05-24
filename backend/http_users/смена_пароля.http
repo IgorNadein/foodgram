@@ -1,8 +1,0 @@
-POST http://localhost:8000/api/users/set_password/
-Content-Type: application/json
-Authorization: Token 841db2bb5e233a176d6142fb4aa080bab1e352f7
-
-{
-    "current_password": "MySecretPas$word",
-    "new_password": "thi$Pa$$w0rdW@sCh@nged"
-}

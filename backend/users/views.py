@@ -192,7 +192,9 @@ class SubscriptionsListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        subscribed_users = User.objects.filter(followers__subscriber=user)
+        subscribed_users = User.objects.filter(
+            id__in=Subscription.objects.filter(subscriber=user).values('author')
+        )
         return subscribed_users
 
     def get_serializer_context(self):

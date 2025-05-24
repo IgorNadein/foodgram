@@ -1,7 +1,0 @@
-POST http://localhost:8000/api/auth/token/login/
-Content-Type: application/json
-
-{
-"email": "vivanov@yandex.ru",
-"password": "MySecretPas$word"
-}
