@@ -1,7 +1,6 @@
 # api/routers.py
-from rest_framework.routers import DefaultRouter
-
 from api.views import IngredientViewSet, RecipeViewSet, TagViewSet
+from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
 
 router = DefaultRouter()

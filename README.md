@@ -11,3 +11,14 @@ python manage.py runserver
 
 
 source .venv/Scripts/activate
+
+cd frontend
+docker build -t igornadein/foodgram_frontend .  
+cd ../backend
+docker build -t igornadein/foodgram_backend .
+cd ../nginx
+docker build -t igornadein/foodgram_proxy . 
+cd ..
+docker push igornadein/foodgram_frontend
+docker push igornadein/foodgram_backend
+docker push igornadein/foodgram_proxy

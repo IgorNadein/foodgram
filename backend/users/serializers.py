@@ -3,11 +3,11 @@ from django.contrib.auth import (authenticate, get_user_model,
                                  update_session_auth_hash)
 from django.contrib.auth.password_validation import validate_password
 from django.core import validators
+from food.serializers import Base64ImageField, RecipeShortSerializer
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
-from food.serializers import Base64ImageField, RecipeShortSerializer
-from .models import Subscription, User
+from .models import Subscription
 
 User = get_user_model()
 

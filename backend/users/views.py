@@ -1,3 +1,4 @@
+from api.permissions import IsAuthorOrReadOnly
 from django.shortcuts import get_object_or_404
 from food.serializers import RecipeShortSerializer
 from rest_framework import generics, status, viewsets
@@ -7,7 +8,6 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.permissions import IsAuthorOrReadOnly
 from .models import Subscription, User
 from .serializers import (AuthTokenSerializer, AvatarSerializer,
                           PasswordChangeSerializer, SubscribedUserSerializer,
@@ -193,7 +193,9 @@ class SubscriptionsListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         subscribed_users = User.objects.filter(
-            id__in=Subscription.objects.filter(subscriber=user).values('author')
+            id__in=Subscription.objects.filter(
+                subscriber=user
+            ).values('author')
         )
         return subscribed_users
 

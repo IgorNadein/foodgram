@@ -1,8 +1,6 @@
-from django.contrib import admin
-from django.urls import path, include
-
 from api import views as api_views
-
+from django.contrib import admin
+from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),

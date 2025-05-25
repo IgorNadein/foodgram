@@ -2,7 +2,6 @@
 import json
 
 from django.core.management.base import BaseCommand
-
 from food.models import Ingredient
 
 
@@ -11,9 +10,12 @@ class Command(BaseCommand):
         load_from_json()
         # load_from_csv()
 
+
 def load_from_json():
     try:
-        with open('static/data/ingredients.json', 'r', encoding='utf-8') as file:
+        with open(
+            'static/data/ingredients.json', 'r', encoding='utf-8'
+        ) as file:
             data = json.load(file)
             for item in data:
                 Ingredient.objects.create(
@@ -27,7 +29,9 @@ def load_from_json():
 
 # def load_from_csv():
 #     try:
-#         with open('static/data/ingredients.csv', 'r', encoding='utf-8') as file:
+#         with open(
+# 'static/data/ingredients.csv', 'r', encoding='utf-8'
+# ) as file:
 #             reader = csv.DictReader(file)
 #             for row in reader:
 #                 Ingredient.objects.create(

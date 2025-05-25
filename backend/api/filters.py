@@ -1,6 +1,5 @@
 import django_filters
 from django.db.models import Exists, OuterRef
-
 from food.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 

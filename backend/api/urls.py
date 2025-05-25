@@ -1,6 +1,6 @@
 from django.urls import include, path
-
 from users import views as users_views
+
 from . import views
 from .routers import router
 
