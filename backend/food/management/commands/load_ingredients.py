@@ -14,7 +14,7 @@ class Command(BaseCommand):
 def load_from_json():
     try:
         with open(
-            'static/data/ingredients.json', 'r', encoding='utf-8'
+            'data/ingredients.json', 'r', encoding='utf-8'
         ) as file:
             data = json.load(file)
             for item in data:
