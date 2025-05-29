@@ -20,13 +20,13 @@ class RecipeFilter(django_filters.FilterSet):
         fields = ['tags', 'author', 'is_favorited',
                   'is_in_shopping_cart']
 
-    def filter_is_favorited(self, queryset, name, value):
+    def filter_is_favorited(self, filtered_recipes, name, value):
         user = self.request.user
         if user.is_anonymous:
-            return queryset
+            return filtered_recipes
         if value:
             value = bool(int(value))
-            return queryset.annotate(
+            return filtered_recipes.annotate(
                 is_favorited_flag=Exists(
                     Favorite.objects.filter(
                         user=user,
@@ -34,15 +34,15 @@ class RecipeFilter(django_filters.FilterSet):
                     )
                 )
             ).filter(is_favorited_flag=value)
-        return queryset
+        return filtered_recipes
 
-    def filter_is_in_shopping_cart(self, queryset, name, value):
+    def filter_is_in_shopping_cart(self, filtered_recipes, name, value):
         user = self.request.user
         if user.is_anonymous:
-            return queryset
+            return filtered_recipes
         if value:
             value = bool(int(value))
-            return queryset.annotate(
+            return filtered_recipes.annotate(
                 is_in_shopping_cart_flag=Exists(
                     ShoppingCart.objects.filter(
                         user=user,
@@ -50,7 +50,7 @@ class RecipeFilter(django_filters.FilterSet):
                     )
                 )
             ).filter(is_in_shopping_cart_flag=value)
-        return queryset
+        return filtered_recipes
 
 
 class IngredientFilter(django_filters.FilterSet):

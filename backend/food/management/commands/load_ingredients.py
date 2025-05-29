@@ -1,4 +1,3 @@
-# import csv
 import json
 
 from django.core.management.base import BaseCommand
@@ -7,38 +6,18 @@ from food.models import Ingredient
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        load_from_json()
-        # load_from_csv()
+        load_from_json(Ingredient, 'data/ingredients.json')
 
 
-def load_from_json():
+def load_from_json(model, file_path):
     try:
-        with open(
-            'data/ingredients.json', 'r', encoding='utf-8'
-        ) as file:
+        with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
-            for item in data:
-                Ingredient.objects.create(
-                    name=item['name'],
-                    measurement_unit=item['measurement_unit']
-                )
-    except FileNotFoundError:
-        print("Файл ingredients.json не найден")
-    except json.JSONDecodeError:
-        print("Ошибка при чтении JSON файла")
+            object_to_create = [model(**item) for item in data]
+            model.objects.bulk_create(object_to_create)
+            print(
+                f'Успешно загружено {len(object_to_create)} объекта.'
+            )
 
-# def load_from_csv():
-#     try:
-#         with open(
-# 'static/data/ingredients.csv', 'r', encoding='utf-8'
-# ) as file:
-#             reader = csv.DictReader(file)
-#             for row in reader:
-#                 Ingredient.objects.create(
-#                     name=row['name'],
-#                     measurement_unit=row['measurement_unit']
-#                 )
-#     except FileNotFoundError:
-#         print("Файл ingredients.csv не найден")
-#     except csv.Error:
-#         print("Ошибка при чтении CSV файла")
+    except Exception:
+        print(f'Произошла ошибка при обработке файла {file_path}.')

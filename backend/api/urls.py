@@ -1,33 +1,17 @@
+from api.views import IngredientViewSet, RecipeViewSet, TagViewSet, UserViewSet
 from django.urls import include, path
-from users import views as users_views
+from rest_framework.routers import DefaultRouter
 
-from . import views
-from .routers import router
+router = DefaultRouter()
+
+router.register(r'tags', TagViewSet, basename='tag')
+router.register(r'ingredients', IngredientViewSet, basename='ingredient')
+router.register(r'users', UserViewSet, basename='user')
+router.register(r'recipes', RecipeViewSet, basename='recipe')
+
 
 urlpatterns = [
-    path('auth/token/login/',
-         users_views.AuthTokenView.as_view(),
-         name='auth-token'),
-    path('auth/token/logout/',
-         users_views.LogoutView.as_view(),
-         name='auth-token-logout'),
-    path('users/me/avatar/',
-         users_views.UserAvatarUpdateOrDeleteView.as_view(),
-         name='user-avatar-update'),
-    path('users/subscriptions/',
-         users_views.SubscriptionsListView.as_view(),
-         name='user-subscriptions'),
-    path('recipes/<int:pk>/get-link/',
-         views.get_recipe_short_link,
-         name='get-recipe-short-link'),
-    path('recipes/<int:pk>/shopping_cart/',
-         views.manage_shopping_cart,
-         name='add-to-shopping-cart'),
-    path('recipes/<int:pk>/favorite/',
-         views.manage_favorite,
-         name='add-to-shopping-cart'),
-    path('recipes/download_shopping_cart/',
-         views.download_shopping_cart,
-         name='download-shopping-cart'),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
     path('', include(router.urls)),
 ]

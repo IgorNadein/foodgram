@@ -1,15 +1,13 @@
 import os
 from pathlib import Path
-from typing import Any, Dict
 
-import dj_database_url
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-@*y6nl^m3^yj^p)u-#ga+c!f3o!vhof9_h!sgp!by-#a#h^-ck'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG')
 
@@ -25,9 +23,9 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework',
     'django_filters',
-    'djoser',
-    'food.apps.FoodConfig',
     'api.apps.ApiConfig',
+    'food.apps.FoodConfig',
+    'users.apps.UsersConfig',
 ]
 
 MIDDLEWARE = [
@@ -45,7 +43,7 @@ ROOT_URLCONF = 'foodgram_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -60,21 +58,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram_backend.wsgi.application'
 
-USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() == 'true'
 
-DATABASES: Dict[str, Any] = {
-    'default': {}
-}
-
-if USE_SQLITE:
-    # Конфигурация для SQLite
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-else:
-    # Конфигурация для PostgreSQL
-    DATABASES['default'] = {
+DATABASES = {
+    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('POSTGRES_DB', 'django'),
         'USER': os.getenv('POSTGRES_USER', 'django'),
@@ -82,9 +68,7 @@ else:
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', 5432)
     }
-
-DATABASES['default'].update(dj_database_url.config(
-    conn_max_age=600, ssl_require=True))
+}
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -120,7 +104,7 @@ STATIC_ROOT = BASE_DIR / 'collected_static/'
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-AUTH_USER_MODEL = 'food.User'
+AUTH_USER_MODEL = 'users.User'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
@@ -128,29 +112,10 @@ AUTHENTICATION_BACKENDS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-PAGINATION_LIMIT = 6
-
-
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': PAGINATION_LIMIT,
+    'PAGE_SIZE': 6,
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ]
-}
-
-DJOSER = {
-    'SERIALIZERS': {
-        'user': 'api.serializers.UserSerializer',
-        'current_user': 'api.serializers.UserSerializer',
-        'user_create': 'api.serializers.UserRegistrationSerializer',
-        'token_create': 'djoser.serializers.TokenCreateSerializer',
-    },
-    'PERMISSIONS': {
-        'user': ('rest_framework.permissions.AllowAny',),
-        'user_create': ('rest_framework.permissions.AllowAny',),
-        'user_list': ('rest_framework.permissions.AllowAny',),
-    },
-    'LOGIN_FIELD': 'email',
-    'HIDE_USERS': False,
 }
