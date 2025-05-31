@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -21,14 +21,14 @@ from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           ReadRecipeSerializer, RecipePreviewSerializer,
                           RecipeWriteSerializer, SubscribedUserSerializer,
-                          TagSerializer, UserSerializer)
+                          TagSerializer, BaseUserSerializerMixin)
 
 User = get_user_model()
 
 
 class UserViewSet(DjoserUserViewSet):
     """Кастомный вьюсет пользователя с обработкой подписок."""
-    serializer_class = UserSerializer
+    serializer_class = BaseUserSerializerMixin
     pagination_class = LimitPagination
 
     @action(
@@ -267,3 +267,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return self.manage_relation(
             request, pk, Favorite,
         )
+
+
+def api_documentation(request):
+    template = 'api/docs/redoc.html'
+    # template = 'api/docs/openapi-schema.yml'
+    return render(request, template)

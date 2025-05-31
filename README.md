@@ -17,15 +17,9 @@
 ## Установка
 Клонировать репозиторий и перейти в него в командной строке:  
 ```bash
-<<<<<<< HEAD
 git clone https://github.com/IgorNadein/foodgram.git
 cd foodgram
 ```
-=======
-*git clone https://github.com/IgorNadein/foodgram.git*  
-*cd foodgram*
-bash```
->>>>>>> 881f277dc8dc428692495ca4d380b749b5afb345
 
 ## Запуск проекта и перенос данных
 Cоздать файлы .env по аналогии с файлом .env.example в корневой папке и директории ./backend/foodgram_backend.
@@ -55,7 +49,8 @@ docker compose exec backend python manage.py createsuperuser
 docker compose exec backend python manage.py load_ingredients 
 docker compose exec backend python manage.py load_tags
 ```
-После выполненных манипуляций при обращении к адресам http://localhost:8000/ и http://localhost:8000/admin/ должны отобразиться главная страница веб-приложения и админка Foodgram соответственно.
+После выполненных манипуляций должны отобразиться [главная страница веб-приложения](http://localhost:8000/) и [админка Foodgram](http://localhost:8000/admin/).
+
 ## Примеры запросов и ответов
 
 Варианты некоторых возможных запросов и ответы:  
@@ -173,6 +168,8 @@ POST-запрос на эндпоинт http://127.0.0.1:8000/api/users/{id}/sub
 
 ### Ссылка на проект
 [Foodgram](https://foodgram.servepics.com/)
+[Админ зона](https://foodgram.servepics.com/admin/)
+[Документация к api](https://foodgram.servepics.com/api/docs/)
 
 ### Автор
 [Игорь Надеин](https://github.com/IgorNadein/)

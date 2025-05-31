@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .models import (
@@ -129,19 +130,18 @@ class RecipeAdmin(admin.ModelAdmin):
             )
         return 'Нет изображения'
 
-    @admin.display(description='Количество лайков')
+    @admin.display(description='Kайки')
     def get_likes(self, recipe):
         return recipe.favorites.count()
 
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
-        return '\n'.join(
-            f'{ingredient.name} - {ingredient.amount}'
-            f'{ingredient.measurement_unit}'
-            for ingredient in recipe.ingredients.through.objects.filter(
-                recipe=recipe
-            ).select_related('ingredient')
-        )
+        ingredients = recipe.ingredients.all().select_related('ingredient')
+        return format_html('<br>'.join(
+            f'{ingredient.name} '
+            f'- {ingredient.amount} {ingredient.measurement_unit}'
+            for ingredient in ingredients
+        ))
 
     @admin.display(description='Теги')
     def tags_list(self, obj):

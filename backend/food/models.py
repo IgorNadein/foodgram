@@ -45,7 +45,7 @@ class User(AbstractUser):
     )
 
     avatar = models.ImageField(
-        verbose_name='Фото профиля',
+        verbose_name='Аватарка',
         upload_to='users/',
         blank=True,
         null=True,
@@ -199,10 +199,7 @@ class IngredientRecipe(models.Model):
 
 
 class BaseFavoriteShoppingCart(models.Model):
-    """
-    Base class for Favorite and ShoppingCart models, handling common fields
-    and constraints.
-    """
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -216,6 +213,9 @@ class BaseFavoriteShoppingCart(models.Model):
 
     class Meta:
         abstract = True
+        default_related_name = '%(class)s'
+        verbose_name = '%(class)s'
+        verbose_name_plural = '%(class)ses'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],

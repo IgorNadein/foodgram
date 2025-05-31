@@ -36,6 +36,7 @@ class BaseUserSerializerMixin(DjoserUserSerializer):
             'is_subscribed',
             'avatar'
         )
+        read_only_fields = fields
 
     def get_is_subscribed(self, author):
         return (
@@ -46,11 +47,6 @@ class BaseUserSerializerMixin(DjoserUserSerializer):
                 author=author
             ).exists()
         )
-
-
-class UserSerializer(BaseUserSerializerMixin):
-    class Meta(BaseUserSerializerMixin.Meta):
-        read_only_fields = (*BaseUserSerializerMixin.Meta.fields,)
 
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -86,9 +82,9 @@ class SubscribedUserSerializer(BaseUserSerializerMixin):
         recipes_limit = request.query_params.get('recipes_limit')
 
         try:
-            recipes_limit = int(recipes_limit) if recipes_limit else 6
+            recipes_limit = int(recipes_limit) if recipes_limit else 10**10
         except ValueError:
-            recipes_limit = 6
+            recipes_limit = 10**10
 
         recipes = obj.recipes.all()[:recipes_limit]
         return RecipeShortSerializer(
@@ -110,14 +106,14 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ReadIngredientRecipeSerializer(serializers.Serializer):
-    id = serializers.PrimaryKeyRelatedField(
-        source='ingredient.id', read_only=True
+class ReadIngredientRecipeSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(
+        source='ingredient.id',
+        read_only=True
     )
     name = serializers.CharField(source='ingredient.name')
     measurement_unit = serializers.CharField(
         source='ingredient.measurement_unit')
-    amount = serializers.IntegerField()
 
     class Meta:
         model = IngredientRecipe
@@ -133,7 +129,7 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    author = UserSerializer(read_only=True)
+    author = BaseUserSerializerMixin(read_only=True)
 
     class Meta:
         model = Recipe
@@ -158,7 +154,7 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
 
     def _check_user_relation(self, model, recipe):
         request = self.context.get('request')
-        return bool(
+        return (
             request
             and request.user.is_authenticated
             and model.objects.filter(
@@ -176,9 +172,7 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
     )
     amount = serializers.IntegerField(
         required=True,
-        validators=[
-            MinValueValidator(INGREDIENT_AMOUNT_MIN_VALUE),
-        ]
+        min_value=INGREDIENT_AMOUNT_MIN_VALUE
     )
 
     class Meta:
@@ -197,9 +191,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     )
     cooking_time = serializers.IntegerField(
         required=True,
-        validators=[
-            MinValueValidator(COOKING_TIME_MIN_VALUE),
-        ]
+        min_value=COOKING_TIME_MIN_VALUE
     )
 
     class Meta:
@@ -219,9 +211,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f'Список "{field_name}" не может быть пустым.'
             )
-        element_counts = Counter(data)
+        element_stats = Counter(data)
         duplicates = {element: count for element,
-                      count in element_counts.items() if count > 1}
+                      count in element_stats.items() if count > 1}
 
         if duplicates:
             raise serializers.ValidationError(
@@ -252,22 +244,22 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         ingredients_data = self.validate_ingredients(
             validated_data.pop('ingredients', [])
         )
-        if ingredients_data:
-            self.write_ingredients(recipe, ingredients_data)
+        # if ingredients_data:
+        self.write_ingredients(recipe, ingredients_data)
         tags_data = self.validate_tags(validated_data.pop('tags', []))
-        if tags_data:
-            recipe.tags.set(tags_data)
+        # if tags_data:
+        recipe.tags.set(tags_data)
         return super().update(recipe, validated_data)
 
     def write_ingredients(self, recipe, ingredients_data):
-        IngredientRecipe.objects.bulk_create([
+        IngredientRecipe.objects.bulk_create(
             IngredientRecipe(
                 recipe=recipe,
                 ingredient=item['id'],
                 amount=item['amount']
             )
             for item in ingredients_data
-        ])
+        )
 
     def to_representation(self, instance):
         return ReadRecipeSerializer(instance, context=self.context).data
