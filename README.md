@@ -17,9 +17,15 @@
 ## Установка
 Клонировать репозиторий и перейти в него в командной строке:  
 ```bash
+<<<<<<< HEAD
 git clone https://github.com/IgorNadein/foodgram.git
 cd foodgram
 ```
+=======
+*git clone https://github.com/IgorNadein/foodgram.git*  
+*cd foodgram*
+bash```
+>>>>>>> 881f277dc8dc428692495ca4d380b749b5afb345
 
 ## Запуск проекта и перенос данных
 Cоздать файлы .env по аналогии с файлом .env.example в корневой папке и директории ./backend/foodgram_backend.

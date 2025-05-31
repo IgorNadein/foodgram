@@ -11,6 +11,7 @@ from food.constants import COOKING_TIME_MIN_VALUE, INGREDIENT_AMOUNT_MIN_VALUE
 from food.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                          ShoppingCart, Subscription, Tag)
 
+
 User = get_user_model()
 
 

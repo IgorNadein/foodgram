@@ -107,7 +107,8 @@ class IngredientAdmin(RecipeCountAdminMixin, admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'cooking_time', 'author',
-                    'get_likes', 'ingredients_list', 'image_preview', 'tags_list')
+                    'get_likes', 'ingredients_list', 'image_preview',
+                    'tags_list')
     search_fields = ('name', 'text', 'author__username')
     list_filter = ('tags', 'author')
     filter_horizontal = ('tags',)

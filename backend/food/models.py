@@ -1,8 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.core.validators import (MinValueValidator, RegexValidator)
+from django.core.validators import MinValueValidator
 from django.db import models
-# from django.utils.translation import gettext_lazy as _
 
 from .constants import (COOKING_TIME_MIN_VALUE, EMAIL_MAX_LENGTH,
                         FIRST_NAME_MAX_LENGTH, INGREDIENT_AMOUNT_MIN_VALUE,
@@ -10,9 +9,6 @@ from .constants import (COOKING_TIME_MIN_VALUE, EMAIL_MAX_LENGTH,
 
 
 class User(AbstractUser):
-    # name_validator = RegexValidator(
-    #     regex=r'^[^\d\W_]+$',
-    # )
 
     email = models.EmailField(
         verbose_name='Email',
@@ -39,7 +35,6 @@ class User(AbstractUser):
         verbose_name='Имя',
         max_length=FIRST_NAME_MAX_LENGTH,
         help_text='Укажите имя.',
-        # validators=[name_validator]
     )
 
     last_name = models.CharField(
@@ -47,7 +42,6 @@ class User(AbstractUser):
         max_length=LAST_NAME_MAX_LENGTH,
         help_text='Укажите фамилию.',
         null=False,
-        # validators=[name_validator]
     )
 
     avatar = models.ImageField(

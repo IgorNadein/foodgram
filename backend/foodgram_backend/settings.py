@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
 from typing import Any, Dict
-from django.core.management.utils import get_random_secret_key
 
 import dj_database_url
 from api.constants import PAGINATION_LIMIT
+from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 load_dotenv()
