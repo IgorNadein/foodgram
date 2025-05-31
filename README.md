@@ -14,11 +14,12 @@
 * Docker
 * Nginx
 
-```bash
 ## Установка
 Клонировать репозиторий и перейти в него в командной строке:  
+```bash
 *git clone https://github.com/IgorNadein/foodgram.git*  
 *cd foodgram*
+```bash
 
 ## Запуск проекта и перенос данных
 Cоздать файлы .env по аналогии с файлом .env.example в корневой папке и директории ./backend/foodgram_backend.
