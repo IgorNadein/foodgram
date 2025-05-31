@@ -130,16 +130,19 @@ class RecipeAdmin(admin.ModelAdmin):
             )
         return 'Нет изображения'
 
-    @admin.display(description='Kайки')
+    @admin.display(description='Лайки')
     def get_likes(self, recipe):
         return recipe.favorites.count()
 
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
-        ingredients = recipe.ingredients.all().select_related('ingredient')
+        ingredients = recipe.recipe_ingredients.all().select_related(
+            'ingredient'
+        )
+
         return format_html('<br>'.join(
-            f'{ingredient.name} '
-            f'- {ingredient.amount} {ingredient.measurement_unit}'
+            f'{ingredient.ingredient.name} '
+            f'- {ingredient.amount} {ingredient.ingredient.measurement_unit}'
             for ingredient in ingredients
         ))
 
