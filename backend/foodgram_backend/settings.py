@@ -1,15 +1,17 @@
 import os
 from pathlib import Path
 from typing import Any, Dict
+from django.core.management.utils import get_random_secret_key
 
 import dj_database_url
+from api.constants import PAGINATION_LIMIT
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-@*y6nl^m3^yj^p)u-#ga+c!f3o!vhof9_h!sgp!by-#a#h^-ck'
+SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
 
 DEBUG = os.getenv('DEBUG')
 
@@ -128,8 +130,6 @@ AUTHENTICATION_BACKENDS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-PAGINATION_LIMIT = 6
-
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -140,17 +140,15 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'HIDE_USERS': False,
     'SERIALIZERS': {
-        'user': 'api.serializers.UserSerializer',
         'current_user': 'api.serializers.UserSerializer',
-        'user_create': 'api.serializers.UserRegistrationSerializer',
-        'token_create': 'djoser.serializers.TokenCreateSerializer',
+        'user': 'api.serializers.UserSerializer',
     },
     'PERMISSIONS': {
         'user': ('rest_framework.permissions.AllowAny',),
         'user_create': ('rest_framework.permissions.AllowAny',),
         'user_list': ('rest_framework.permissions.AllowAny',),
     },
-    'LOGIN_FIELD': 'email',
-    'HIDE_USERS': False,
 }

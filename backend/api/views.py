@@ -6,7 +6,8 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUserViewSet
-from food.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from food.models import (Favorite, Ingredient, Recipe, ShoppingCart,
+                         Subscription, Tag)
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -20,8 +21,7 @@ from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           ReadRecipeSerializer, RecipePreviewSerializer,
                           RecipeWriteSerializer, SubscribedUserSerializer,
-                          SubscriptionSerializer, TagSerializer,
-                          UserSerializer)
+                          TagSerializer, UserSerializer)
 
 User = get_user_model()
 
@@ -67,11 +67,10 @@ class UserViewSet(DjoserUserViewSet):
                 status=status.HTTP_200_OK
             )
 
-        else:
-            if user.avatar:
-                user.avatar.delete(save=True)
-                user.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        if user.avatar:
+            user.avatar.delete(save=True)
+            user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -82,26 +81,35 @@ class UserViewSet(DjoserUserViewSet):
     def subscribe(self, request, id=None):
         """Подписка/отписка от пользователя."""
         author = get_object_or_404(User, id=id)
-        serializer = SubscriptionSerializer(
-            data=request.data,
-            context={
-                'request': request,
-                'author': author,
-                'recipes_limit': request.query_params.get('recipes_limit')
-            }
+        user = request.user
+        serializer = SubscribedUserSerializer(
+            author, context={'request': request}
         )
-
-        serializer.is_valid(raise_exception=True)
+        subscription = Subscription.objects.filter(
+            subscriber=user, author=author
+        ).first()
         if request.method == 'POST':
-            serializer.create(serializer.validated_data)
+            if user == author:
+                raise ValidationError('Нельзя подписаться на себя')
+
+            if subscription:
+                raise ValidationError(
+                    f'Вы уже подписаны на {author.username}'
+                )
+            Subscription.objects.create(
+                subscriber=user, author=author
+            )
             return Response(
-                serializer.to_representation(author),
+                serializer.data,
                 status=status.HTTP_201_CREATED
             )
-        elif request.method == 'DELETE':
-            serializer.destroy()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        raise ValidationError
+        if not subscription:
+            raise ValidationError(
+                {'error': 'Вы не подписаны на этого пользователя.'}
+            )
+
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -217,7 +225,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user=user, recipe=recipe)
             if not created:
                 return Response(
-                    {'error': f'Рецепт уже в {model._meta.verbose_name}.'},
+                    {'error': f'Рецепт {pk} уже в {model._meta.verbose_name}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -227,15 +235,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
 
-        elif request.method == 'DELETE':
-            try:
-                get_object_or_404(model, user=user, recipe=recipe).delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except Http404:
-                return Response(
-                    {'error': 'Рецепт не найден в списке.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        get_object_or_404(model, user=user, recipe=recipe).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,

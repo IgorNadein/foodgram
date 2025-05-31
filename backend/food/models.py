@@ -1,83 +1,64 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.core.validators import (EmailValidator, MaxLengthValidator,
-                                    MinValueValidator, RegexValidator)
+from django.core.validators import (MinValueValidator, RegexValidator)
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+# from django.utils.translation import gettext_lazy as _
 
 from .constants import (COOKING_TIME_MIN_VALUE, EMAIL_MAX_LENGTH,
                         FIRST_NAME_MAX_LENGTH, INGREDIENT_AMOUNT_MIN_VALUE,
                         LAST_NAME_MAX_LENGTH, USERNAME_MAX_LENGTH)
-from .validators import validate_username
 
 
 class User(AbstractUser):
-
-    username_validator = UnicodeUsernameValidator()
-    name_validator = RegexValidator(
-        regex=r'^[^\d\W_]+$',
-        message=_('Имя/Фамилия должны содержать только буквы')
-    )
+    # name_validator = RegexValidator(
+    #     regex=r'^[^\d\W_]+$',
+    # )
 
     email = models.EmailField(
-        _('email address'),
+        verbose_name='Email',
         unique=True,
-        blank=False,
-        null=False,
+        help_text=(
+            f'Укажите e-mail. '
+            f'E-mail не должен превышать {EMAIL_MAX_LENGTH} символов.'
+        ),
         max_length=EMAIL_MAX_LENGTH,
-        validators=[
-            MaxLengthValidator(EMAIL_MAX_LENGTH),
-            EmailValidator()
-        ],
-        error_messages={
-            'unique': _('Пользователь с таким email уже существует.'),
-            'blank': _('Email обязателен для заполнения.'),
-            'null': _('Email не может быть null.')
-        }
     )
 
     username = models.CharField(
-        _('username'),
+        verbose_name='Ник',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        help_text=_(
-            f'''
-            Обязательное поле. Не более {USERNAME_MAX_LENGTH} символов.
-            Разрешены буквы, цифры и @/./+/-/_
-            '''
+        help_text=(
+            f'Обязательное поле. Не более {USERNAME_MAX_LENGTH} символов.'
+            ' Разрешены буквы, цифры и @/./+/-/_'
         ),
-        validators=[
-            validate_username,
-            username_validator
-        ],
-        error_messages={
-            'unique': _("Пользователь с таким именем уже существует."),
-        }
+        validators=(UnicodeUsernameValidator(),),
     )
 
     first_name = models.CharField(
-        _('first name'),
+        verbose_name='Имя',
         max_length=FIRST_NAME_MAX_LENGTH,
-        blank=False,
-        validators=[name_validator]
+        help_text='Укажите имя.',
+        # validators=[name_validator]
     )
 
     last_name = models.CharField(
-        _('last name'),
+        verbose_name='Фамилия',
         max_length=LAST_NAME_MAX_LENGTH,
-        blank=False,
-        validators=[name_validator]
+        help_text='Укажите фамилию.',
+        null=False,
+        # validators=[name_validator]
     )
 
     avatar = models.ImageField(
+        verbose_name='Фото профиля',
         upload_to='users/',
         blank=True,
         null=True,
-        verbose_name='Аватарка пользователя',
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ['username', 'last_name', 'first_name']
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -152,6 +133,7 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ингридиент'
         verbose_name_plural = 'Ингридиенты'
+        ordering = ('name',)
 
 
 class Recipe(models.Model):
@@ -159,7 +141,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        verbose_name='Автор публикации (пользователь)',
+        verbose_name='Автор',
     )
     name = models.CharField(
         max_length=256,
@@ -194,6 +176,7 @@ class Recipe(models.Model):
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         default_related_name = 'recipes'
+        ordering = ('name',)
 
 
 class IngredientRecipe(models.Model):
@@ -207,7 +190,7 @@ class IngredientRecipe(models.Model):
     )
     amount = models.IntegerField(
         default=1,
-        verbose_name='Количество ингредиентов',
+        verbose_name='Мера ингредиентов',
         validators=[
             MinValueValidator(
                 INGREDIENT_AMOUNT_MIN_VALUE
@@ -229,10 +212,12 @@ class BaseFavoriteShoppingCart(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        verbose_name='Пользователь',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        verbose_name='Рецепт',
     )
 
     class Meta:

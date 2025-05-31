@@ -1,4 +1,4 @@
-from foodgram_backend.settings import PAGINATION_LIMIT
+from .constants import PAGINATION_LIMIT
 from rest_framework.pagination import PageNumberPagination
 
 

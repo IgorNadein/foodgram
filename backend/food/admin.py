@@ -1,28 +1,39 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count
-from django.utils.html import format_html
-from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
 
-from .models import (Favorite, Ingredient, IngredientRecipe, Recipe,
-                     ShoppingCart, Subscription, Tag, User)
+from .models import (
+    Favorite, Ingredient, IngredientRecipe, Recipe,
+    ShoppingCart, Subscription, Tag, User
+)
 
 
 @admin.register(User)
 class ExtendedUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'get_full_name',
                     'email', 'avatar_preview', 'following_count',
-                    'followers_count', 'is_staff')
+                    'followers_count', 'recipe_count', 'is_staff')
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {
-         'fields': ('first_name', 'last_name', 'email', 'avatar')}),
-        (_('Permissions'), {'fields': ('is_active', 'is_staff',
+        ('Personal info', {
+            'fields': ('first_name', 'last_name', 'email', 'avatar')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff',
          'is_superuser', 'groups', 'user_permissions')}),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     readonly_fields = ('last_login', 'date_joined')
     ordering = ('id',)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            recipe_count=Count('recipes', distinct=True)
+        )
+
+    @admin.display(description='Рецептов', ordering='recipe_count')
+    def recipe_count(self, obj):
+        return obj.recipe_count
 
     @admin.display(description='ФИО')
     def get_full_name(self, obj):
@@ -31,19 +42,19 @@ class ExtendedUserAdmin(UserAdmin):
     @admin.display(description='Аватар')
     def avatar_preview(self, obj):
         if obj.avatar:
-            return format_html(
-                '<img src="" style="max-height: 50px; max-width: 50px;" />',
-                obj.avatar.url
+            return mark_safe(
+                f'<img src="{obj.avatar.url}" '
+                'style="max-height: 50px; max-width: 50px;" />'
             )
-        return _('No Avatar')
+        return 'No Avatar'
 
     @admin.display(description='Подписок')
     def following_count(self, obj):
-        return Subscription.objects.filter(subscriber=obj).count()
+        return obj.authors.count()
 
     @admin.display(description='Подписчиков')
     def followers_count(self, obj):
-        return Subscription.objects.filter(author=obj).count()
+        return obj.followers.count()
 
 
 @admin.register(Subscription)
@@ -63,21 +74,17 @@ class IngredientRecipeInline(admin.TabularInline):
 
 
 class RecipeCountAdminMixin:
-    """
-    Mixin to add recipe count to admin list views.
-    This is designed to be non-destructive.
-    """
-
     @admin.display(
-        description='Количество рецептов',
+        description='Рецепты',
         ordering='recipe_count'
     )
     def recipe_count(self, obj):
         return obj.recipes.count()
 
     def get_queryset(self, request):
-        queryset = super().get_queryset(request)
-        return queryset.annotate(recipe_count=Count('recipes'))
+        return super().get_queryset(request).annotate(
+            recipe_count=Count('recipes')
+        )
 
 
 @admin.register(Tag)
@@ -100,46 +107,47 @@ class IngredientAdmin(RecipeCountAdminMixin, admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'cooking_time', 'author',
-                    'get_likes', 'ingredients_list', 'image_preview')
+                    'get_likes', 'ingredients_list', 'image_preview', 'tags_list')
     search_fields = ('name', 'text', 'author__username')
     list_filter = ('tags', 'author')
     filter_horizontal = ('tags',)
     readonly_fields = ('image_preview',)
     inlines = (IngredientRecipeInline,)
     fieldsets = (
-        (None, {
-            'fields': ('name', 'author', 'tags')
-        }),
-        ('Содержимое', {
-            'fields': ('image', 'image_preview', 'text')
-        }),
-        ('Детали', {
-            'fields': ('cooking_time',)
-        }),
+        (None, {'fields': ('name', 'author', 'tags')}),
+        ('Содержимое', {'fields': ('image', 'image_preview', 'text')}),
+        ('Детали', {'fields': ('cooking_time',)}),
     )
 
     @admin.display(description='Изображение')
     def image_preview(self, recipe):
         if recipe.image:
-            return format_html(
-                '<img src="{}" style="max-height: 200px;" />',
-                recipe.image.url
+            return mark_safe(
+                f'<img src="{recipe.image.url}" '
+                'style="max-height: 200px;" />'
             )
         return 'Нет изображения'
 
     @admin.display(description='Количество лайков')
     def get_likes(self, recipe):
-        return Favorite.objects.filter(recipe=recipe).count()
+        return recipe.favorites.count()
 
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
-        ingredients = ', '.join(
-            [ingredient.name for ingredient in recipe.ingredients.all()])
-        return ingredients
+        return '\n'.join(
+            f'{ingredient.name} - {ingredient.amount}'
+            f'{ingredient.measurement_unit}'
+            for ingredient in recipe.ingredients.through.objects.filter(
+                recipe=recipe
+            ).select_related('ingredient')
+        )
+
+    @admin.display(description='Теги')
+    def tags_list(self, obj):
+        return ', '.join(tag.name for tag in obj.tags.all())
 
 
 class FavoriteShoppingCartAdminMixin:
-    """Mixin for models with user and recipe."""
     list_display = ('user', 'recipe')
     search_fields = ('user__username', 'recipe__name')
     list_filter = ('user',)
