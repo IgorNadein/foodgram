@@ -137,7 +137,7 @@ class RecipeAdmin(admin.ModelAdmin):
                     border: 1px solid #ddd;
                     border-radius: 4px;
                 ">
-                    <img src="{recipe.image.url}" 
+                    <img src="{recipe.image.url}"
                         style="
                             object-fit: cover;
                             width: 100%;
