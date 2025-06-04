@@ -130,6 +130,9 @@ class Ingredient(models.Model):
         verbose_name_plural = 'Ингридиенты'
         ordering = ('name',)
 
+    def __str__(self):
+        return f'{self.name} ({self.measurement_unit})'
+
 
 class Recipe(models.Model):
     """Модель рецептров."""
@@ -164,14 +167,21 @@ class Recipe(models.Model):
                 COOKING_TIME_MIN_VALUE
             )
         ],
-        verbose_name='Время приготовления в минутах'
+        verbose_name='Время (мин)'
+    )
+    created_at = models.DateTimeField(
+        verbose_name='Дата публикации',
+        auto_now_add=True
     )
 
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         default_related_name = 'recipes'
-        ordering = ('name',)
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f'{self.name}'
 
 
 class IngredientRecipe(models.Model):
@@ -214,9 +224,7 @@ class BaseFavoriteShoppingCart(models.Model):
 
     class Meta:
         abstract = True
-        default_related_name = '%(class)s'
-        verbose_name = '%(class)s'
-        verbose_name_plural = '%(class)ses'
+        default_related_name = '%(class)ss'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
@@ -230,13 +238,11 @@ class BaseFavoriteShoppingCart(models.Model):
 
 class Favorite(BaseFavoriteShoppingCart):
     class Meta(BaseFavoriteShoppingCart.Meta):
-        default_related_name = 'favorites'
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранные'
 
 
 class ShoppingCart(BaseFavoriteShoppingCart):
     class Meta(BaseFavoriteShoppingCart.Meta):
-        default_related_name = 'shopping_cart_recipes'
         verbose_name = 'Корзина'
         verbose_name_plural = 'Корзины'

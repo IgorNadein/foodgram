@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -18,10 +18,10 @@ from food.models import (Favorite, Ingredient, Recipe, ShoppingCart,
 from .filters import IngredientFilter, RecipeFilter
 from .paginations import LimitPagination
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (AvatarSerializer, IngredientSerializer,
-                          ReadRecipeSerializer, RecipePreviewSerializer,
-                          RecipeWriteSerializer, SubscribedUserSerializer,
-                          TagSerializer, BaseUserSerializerMixin)
+from .serializers import (AvatarSerializer, BaseUserSerializerMixin,
+                          IngredientSerializer, ReadRecipeSerializer,
+                          RecipePreviewSerializer, RecipeWriteSerializer,
+                          SubscribedUserSerializer, TagSerializer)
 
 User = get_user_model()
 
@@ -180,7 +180,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         user = request.user
 
-        recipes = user.shopping_cart_recipes.select_related(
+        recipes = user.shoppingcarts.select_related(
             'recipe').all().distinct()
 
         ingredients_with_sum = recipes.values(
@@ -267,9 +267,3 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return self.manage_relation(
             request, pk, Favorite,
         )
-
-
-def api_documentation(request):
-    template = 'api/docs/redoc.html'
-    # template = 'api/docs/openapi-schema.yml'
-    return render(request, template)

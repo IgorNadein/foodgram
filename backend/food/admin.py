@@ -1,17 +1,15 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count
-from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from .models import (
-    Favorite, Ingredient, IngredientRecipe, Recipe,
-    ShoppingCart, Subscription, Tag, User
-)
+from foodgram_backend.admin import admin_site
+from .models import (Favorite, Ingredient, IngredientRecipe, Recipe,
+                     ShoppingCart, Subscription, Tag, User)
+from .filter import HasRecipesFilter, CustomTagListFilter
 
 
-@admin.register(User)
-class ExtendedUserAdmin(UserAdmin):
+@admin.register(User, site=admin_site)
+class CastomUserAdmin(admin.ModelAdmin):
     list_display = ('id', 'username', 'get_full_name',
                     'email', 'avatar_preview', 'following_count',
                     'followers_count', 'recipe_count', 'is_staff')
@@ -58,7 +56,7 @@ class ExtendedUserAdmin(UserAdmin):
         return obj.followers.count()
 
 
-@admin.register(Subscription)
+@admin.register(Subscription, site=admin_site)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('id', 'subscriber', 'author')
     list_filter = ('subscriber', 'author')
@@ -88,7 +86,7 @@ class RecipeCountAdminMixin:
         )
 
 
-@admin.register(Tag)
+@admin.register(Tag, site=admin_site)
 class TagAdmin(RecipeCountAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'slug', 'recipe_count')
     search_fields = ('name', 'slug')
@@ -97,21 +95,24 @@ class TagAdmin(RecipeCountAdminMixin, admin.ModelAdmin):
     list_display_links = ('name',)
 
 
-@admin.register(Ingredient)
+@admin.register(Ingredient, site=admin_site)
 class IngredientAdmin(RecipeCountAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'measurement_unit', 'recipe_count')
     search_fields = ('name', 'measurement_unit')
-    list_filter = ('measurement_unit',)
+    list_filter = ('measurement_unit', HasRecipesFilter)
     list_display_links = ('name',)
 
 
-@admin.register(Recipe)
+@admin.register(Recipe, site=admin_site)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'cooking_time', 'author',
                     'get_likes', 'ingredients_list', 'image_preview',
                     'tags_list')
-    search_fields = ('name', 'text', 'author__username')
-    list_filter = ('tags', 'author')
+    search_fields = ('name', 'text', 'author__username', 'created_at')
+    list_filter = (
+        ('tags', CustomTagListFilter),
+        ('author', admin.RelatedOnlyFieldListFilter),
+    )
     filter_horizontal = ('tags',)
     readonly_fields = ('image_preview',)
     inlines = (IngredientRecipeInline,)
@@ -125,8 +126,25 @@ class RecipeAdmin(admin.ModelAdmin):
     def image_preview(self, recipe):
         if recipe.image:
             return mark_safe(
-                f'<img src="{recipe.image.url}" '
-                'style="max-height: 200px;" />'
+                f'''
+                <div style="
+                    width: 300px;
+                    height: 300px;
+                    overflow: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                ">
+                    <img src="{recipe.image.url}" 
+                        style="
+                            object-fit: cover;
+                            width: 100%;
+                            height: 100%;
+                        ">
+                </div>
+                '''
             )
         return 'Нет изображения'
 
@@ -140,11 +158,13 @@ class RecipeAdmin(admin.ModelAdmin):
             'ingredient'
         )
 
-        return format_html('<br>'.join(
+        ingredients_html = '<br>'.join(
             f'{ingredient.ingredient.name} '
             f'- {ingredient.amount} {ingredient.ingredient.measurement_unit}'
             for ingredient in ingredients
-        ))
+        )
+
+        return mark_safe(ingredients_html)
 
     @admin.display(description='Теги')
     def tags_list(self, obj):
@@ -157,12 +177,12 @@ class FavoriteShoppingCartAdminMixin:
     list_filter = ('user',)
 
 
-@admin.register(Favorite)
+@admin.register(Favorite, site=admin_site)
 class FavoriteAdmin(FavoriteShoppingCartAdminMixin, admin.ModelAdmin):
     pass
 
 
-@admin.register(ShoppingCart)
+@admin.register(ShoppingCart, site=admin_site)
 class ShoppingCartAdmin(FavoriteShoppingCartAdminMixin, admin.ModelAdmin):
     pass
 
