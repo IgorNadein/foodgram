@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.db.models import Count
 from django.utils.safestring import mark_safe
-
 from foodgram_backend.admin import admin_site
+
+from .filter import (CustomTagListFilter, HasFollowersFilter, HasRecipesFilter,
+                     HasSubscriptionsFilter)
 from .models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                      ShoppingCart, Subscription, Tag, User)
-from .filter import HasRecipesFilter, CustomTagListFilter
 
 
 @admin.register(User, site=admin_site)
@@ -14,7 +15,7 @@ class CastomUserAdmin(admin.ModelAdmin):
                     'email', 'avatar_preview', 'following_count',
                     'followers_count', 'recipe_count', 'is_staff')
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
+        (None, {'fields': ('username',)}),
         ('Personal info', {
             'fields': ('first_name', 'last_name', 'email', 'avatar')}),
         ('Permissions', {'fields': ('is_active', 'is_staff',
@@ -22,6 +23,14 @@ class CastomUserAdmin(admin.ModelAdmin):
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     readonly_fields = ('last_login', 'date_joined')
+    list_filter = (
+        HasRecipesFilter,
+        HasSubscriptionsFilter,
+        HasFollowersFilter,
+        'is_staff',
+        'is_superuser',
+        'is_active',
+    )
     ordering = ('id',)
 
     def get_queryset(self, request):
@@ -128,8 +137,8 @@ class RecipeAdmin(admin.ModelAdmin):
             return mark_safe(
                 f'''
                 <div style="
-                    width: 300px;
-                    height: 300px;
+                    width: 100px;
+                    height: 100px;
                     overflow: hidden;
                     display: flex;
                     align-items: center;
@@ -168,7 +177,8 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='Теги')
     def tags_list(self, obj):
-        return ', '.join(tag.name for tag in obj.tags.all())
+        tags_html = '<br>'.join(tag.name for tag in obj.tags.all())
+        return mark_safe(tags_html)
 
 
 class FavoriteShoppingCartAdminMixin:
