@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Exists, OuterRef
 
@@ -16,6 +17,9 @@ class BaseSubscriptionFilter(BaseBooleanFilter):
     """Базовый класс для фильтров подписок"""
 
     def queryset(self, request, queryset):
+        if self.value() not in ('yes', 'no'):
+            return queryset
+
         subquery = Subscription.objects.filter(**{
             self.subscription_field: OuterRef('pk')
         })
