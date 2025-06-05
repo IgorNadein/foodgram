@@ -208,6 +208,12 @@ class IngredientRecipe(models.Model):
         verbose_name_plural = 'Рецептурные продукты'
         default_related_name = 'recipe_ingredients'
 
+    def __str__(self):
+        return (
+            f'{self.ingredient.name}: {self.amount}'
+            f'{self.ingredient.measurement_unit}'
+        )
+
 
 class BaseFavoriteShoppingCart(models.Model):
 

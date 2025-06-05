@@ -195,6 +195,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'recipes': recipes,
             'date': timezone.now().date()
         })
+
         return FileResponse(
             content,
             as_attachment=True,

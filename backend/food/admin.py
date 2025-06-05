@@ -1,21 +1,22 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.db.models import Count
 from django.utils.safestring import mark_safe
 from foodgram_backend.admin import admin_site
 
-from .filter import (CustomTagListFilter, HasFollowersFilter, HasRecipesFilter,
+from .filter import (HasFollowersFilter, HasRecipesFilter,
                      HasSubscriptionsFilter)
 from .models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                      ShoppingCart, Subscription, Tag, User)
 
 
 @admin.register(User, site=admin_site)
-class CastomUserAdmin(admin.ModelAdmin):
+class CastomUserAdmin(BaseUserAdmin):
     list_display = ('id', 'username', 'get_full_name',
                     'email', 'avatar_preview', 'following_count',
                     'followers_count', 'recipe_count', 'is_staff')
     fieldsets = (
-        (None, {'fields': ('username',)}),
+        (None, {'fields': ('username', 'password')}),
         ('Personal info', {
             'fields': ('first_name', 'last_name', 'email', 'avatar')}),
         ('Permissions', {'fields': ('is_active', 'is_staff',
@@ -119,8 +120,7 @@ class RecipeAdmin(admin.ModelAdmin):
                     'tags_list')
     search_fields = ('name', 'text', 'author__username', 'created_at')
     list_filter = (
-        ('tags', CustomTagListFilter),
-        ('author', admin.RelatedOnlyFieldListFilter),
+        ('author', admin.RelatedOnlyFieldListFilter), 'tags',
     )
     filter_horizontal = ('tags',)
     readonly_fields = ('image_preview',)

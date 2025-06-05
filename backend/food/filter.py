@@ -1,4 +1,3 @@
-from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Exists, OuterRef
 
@@ -17,9 +16,6 @@ class BaseSubscriptionFilter(BaseBooleanFilter):
     """Базовый класс для фильтров подписок"""
 
     def queryset(self, request, queryset):
-        if self.value() not in ('yes', 'no'):
-            return queryset
-
         subquery = Subscription.objects.filter(**{
             self.subscription_field: OuterRef('pk')
         })
@@ -53,17 +49,3 @@ class HasRecipesFilter(BaseBooleanFilter):
         if self.value() == 'no':
             return queryset.filter(recipe_count=0)
         return queryset
-
-
-class CustomTagListFilter(admin.RelatedFieldListFilter):
-    """Кастомный фильтр для тегов"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.title = 'Теги'
-
-    def choices(self, changelist):
-        for choice in super().choices(changelist):
-            if choice['query_string']:
-                choice['display'] = choice['display'].replace('Тег: ', '')
-                yield choice
